@@ -89,3 +89,16 @@ Tests are in `/spec/` directory with `.spec.ts` suffix. Uses `spec/dummy-data.ts
 - `SETTING_JSON` - Custom settings JSON file path
 - `YEAR` - Specific year to render
 - `GITHUB_ENDPOINT` - For GitHub Enterprise support
+- `EXCLUDED_LANGUAGES` - Comma-separated list of languages to exclude from pie chart (case-insensitive)
+
+### Language Aliases
+
+When excluding languages, related languages are automatically excluded too. The alias mappings are defined in `src/aggregate-user-info.ts`:
+
+- `typescript` → also excludes `tsx`
+- `javascript` → also excludes `jsx`
+- `python` → also excludes `cython`, `jupyter notebook`
+- `c` / `c++` → also excludes `objective-c`, `objective-c++`
+- `shell` → also excludes `bash`, `zsh`, `fish`, `powershell`, `batchfile`
+- `html` → also excludes `html+erb`, `html+django`, `html+php`
+- `css` → also excludes `scss`, `sass`, `less`, `stylus`

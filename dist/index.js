@@ -9,6 +9,49 @@
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.aggregateUserInfo = void 0;
 const OTHER_COLOR = '#444444';
+// Language alias mapping: maps variant languages to their canonical form for exclusion
+// When a user excludes "typescript", it also excludes "tsx"
+// Keys are lowercase canonical names, values are arrays of lowercase aliases
+const LANGUAGE_ALIASES = {
+    typescript: ['tsx'],
+    javascript: ['jsx'],
+    python: ['cython', 'jupyter notebook'],
+    c: ['c++', 'objective-c', 'objective-c++'],
+    'c++': ['c', 'objective-c', 'objective-c++'],
+    shell: ['bash', 'zsh', 'fish', 'powershell', 'batchfile'],
+    html: ['html+erb', 'html+django', 'html+php'],
+    css: ['scss', 'sass', 'less', 'stylus'],
+};
+// Build reverse lookup: alias -> canonical
+const buildAliasLookup = () => {
+    const lookup = new Map();
+    for (const [canonical, aliases] of Object.entries(LANGUAGE_ALIASES)) {
+        // Add canonical -> [canonical, ...aliases]
+        lookup.set(canonical, [canonical, ...aliases]);
+        // Add each alias -> [canonical, ...aliases]
+        for (const alias of aliases) {
+            lookup.set(alias, [canonical, ...aliases]);
+        }
+    }
+    return lookup;
+};
+const ALIAS_LOOKUP = buildAliasLookup();
+// Expand a set of excluded languages to include their aliases
+const expandExcludedLanguages = (excludedLanguages) => {
+    const expanded = new Set();
+    for (const lang of excludedLanguages) {
+        const lowerLang = lang.toLowerCase();
+        expanded.add(lowerLang);
+        // If this language has aliases, add them all
+        const related = ALIAS_LOOKUP.get(lowerLang);
+        if (related) {
+            for (const alias of related) {
+                expanded.add(alias);
+            }
+        }
+    }
+    return expanded;
+};
 const toNumberContributionLevel = (level) => {
     switch (level) {
         case 'NONE':
@@ -34,7 +77,7 @@ const compare = (num1, num2) => {
         return 0;
     }
 };
-const aggregateUserInfo = (response) => {
+const aggregateUserInfo = (response, excludedLanguages = new Set()) => {
     if (!response.data) {
         if (response.errors && response.errors.length) {
             throw new Error(response.errors[0].message);
@@ -43,6 +86,8 @@ const aggregateUserInfo = (response) => {
             throw new Error('JSON\n' + JSON.stringify(response, null, 2));
         }
     }
+    // Expand excluded languages to include their aliases
+    const expandedExclusions = expandExcludedLanguages(excludedLanguages);
     const user = response.data.user;
     const calendar = user.contributionsCollection.contributionCalendar.weeks
         .flatMap((week) => week.contributionDays)
@@ -56,12 +101,18 @@ const aggregateUserInfo = (response) => {
         .filter((repo) => repo.repository.languages && repo.repository.languages.totalSize > 0)
         .forEach((repo) => {
         const languages = repo.repository.languages;
-        const totalSize = languages.totalSize;
         const contributions = repo.contributions.totalCount;
-        languages.edges.forEach((edge) => {
+        // Filter out excluded languages (using expanded set with aliases)
+        const includedEdges = languages.edges.filter((edge) => !expandedExclusions.has(edge.node.name.toLowerCase()));
+        // Recalculate total size from included languages only
+        const adjustedTotalSize = includedEdges.reduce((sum, edge) => sum + edge.size, 0);
+        if (adjustedTotalSize === 0) {
+            return; // Skip repo if all languages excluded
+        }
+        includedEdges.forEach((edge) => {
             const language = edge.node.name;
             const color = edge.node.color || OTHER_COLOR;
-            const proportionalContributions = (edge.size / totalSize) * contributions;
+            const proportionalContributions = (edge.size / adjustedTotalSize) * contributions;
             const info = contributesLanguage[language];
             if (info) {
                 info.contributions += proportionalContributions;
@@ -1243,8 +1294,12 @@ const main = async () => {
             core.setFailed('YEAR is NaN');
             return;
         }
+        const excludedLanguages = new Set((process.env.EXCLUDED_LANGUAGES || '')
+            .split(',')
+            .map((lang) => lang.trim().toLowerCase())
+            .filter((lang) => lang.length > 0));
         const response = await client.fetchData(token, userName, maxRepos, year);
-        const userInfo = aggregate.aggregateUserInfo(response);
+        const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages);
         if (process.env.SETTING_JSON) {
             const settingFile = r.readSettingJson(process.env.SETTING_JSON);
             const settingInfos = 'length' in settingFile ? settingFile : [settingFile];

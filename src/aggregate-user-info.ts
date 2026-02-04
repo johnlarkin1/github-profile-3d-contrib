@@ -3,6 +3,53 @@ import * as type from './type';
 
 const OTHER_COLOR = '#444444';
 
+// Language alias mapping: maps variant languages to their canonical form for exclusion
+// When a user excludes "typescript", it also excludes "tsx"
+// Keys are lowercase canonical names, values are arrays of lowercase aliases
+const LANGUAGE_ALIASES: { [canonical: string]: string[] } = {
+    typescript: ['tsx'],
+    javascript: ['jsx'],
+    python: ['cython', 'jupyter notebook'],
+    c: ['c++', 'objective-c', 'objective-c++'],
+    'c++': ['c', 'objective-c', 'objective-c++'],
+    shell: ['bash', 'zsh', 'fish', 'powershell', 'batchfile'],
+    html: ['html+erb', 'html+django', 'html+php'],
+    css: ['scss', 'sass', 'less', 'stylus'],
+};
+
+// Build reverse lookup: alias -> canonical
+const buildAliasLookup = (): Map<string, string[]> => {
+    const lookup = new Map<string, string[]>();
+    for (const [canonical, aliases] of Object.entries(LANGUAGE_ALIASES)) {
+        // Add canonical -> [canonical, ...aliases]
+        lookup.set(canonical, [canonical, ...aliases]);
+        // Add each alias -> [canonical, ...aliases]
+        for (const alias of aliases) {
+            lookup.set(alias, [canonical, ...aliases]);
+        }
+    }
+    return lookup;
+};
+
+const ALIAS_LOOKUP = buildAliasLookup();
+
+// Expand a set of excluded languages to include their aliases
+const expandExcludedLanguages = (excludedLanguages: Set<string>): Set<string> => {
+    const expanded = new Set<string>();
+    for (const lang of excludedLanguages) {
+        const lowerLang = lang.toLowerCase();
+        expanded.add(lowerLang);
+        // If this language has aliases, add them all
+        const related = ALIAS_LOOKUP.get(lowerLang);
+        if (related) {
+            for (const alias of related) {
+                expanded.add(alias);
+            }
+        }
+    }
+    return expanded;
+};
+
 const toNumberContributionLevel = (level: type.ContributionLevel): number => {
     switch (level) {
         case 'NONE':
@@ -30,6 +77,7 @@ const compare = (num1: number, num2: number): number => {
 
 export const aggregateUserInfo = (
     response: client.ResponseType,
+    excludedLanguages: Set<string> = new Set(),
 ): type.UserInfo => {
     if (!response.data) {
         if (response.errors && response.errors.length) {
@@ -38,6 +86,9 @@ export const aggregateUserInfo = (
             throw new Error('JSON\n' + JSON.stringify(response, null, 2));
         }
     }
+
+    // Expand excluded languages to include their aliases
+    const expandedExclusions = expandExcludedLanguages(excludedLanguages);
 
     const user = response.data.user;
     const calendar = user.contributionsCollection.contributionCalendar.weeks
@@ -54,13 +105,24 @@ export const aggregateUserInfo = (
         .filter((repo) => repo.repository.languages && repo.repository.languages.totalSize > 0)
         .forEach((repo) => {
             const languages = repo.repository.languages!;
-            const totalSize = languages.totalSize;
             const contributions = repo.contributions.totalCount;
 
-            languages.edges.forEach((edge) => {
+            // Filter out excluded languages (using expanded set with aliases)
+            const includedEdges = languages.edges.filter(
+                (edge) => !expandedExclusions.has(edge.node.name.toLowerCase()),
+            );
+
+            // Recalculate total size from included languages only
+            const adjustedTotalSize = includedEdges.reduce((sum, edge) => sum + edge.size, 0);
+
+            if (adjustedTotalSize === 0) {
+                return; // Skip repo if all languages excluded
+            }
+
+            includedEdges.forEach((edge) => {
                 const language = edge.node.name;
                 const color = edge.node.color || OTHER_COLOR;
-                const proportionalContributions = (edge.size / totalSize) * contributions;
+                const proportionalContributions = (edge.size / adjustedTotalSize) * contributions;
 
                 const info = contributesLanguage[language];
                 if (info) {
