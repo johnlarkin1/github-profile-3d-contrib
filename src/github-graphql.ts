@@ -5,16 +5,26 @@ export const URL =
     process.env.GITHUB_ENDPOINT || 'https://api.github.com/graphql';
 const maxReposOneQuery = 100;
 
+export type LanguageEdge = {
+    size: number;
+    node: {
+        name: string;
+        /** "#RRGGBB" */
+        color: string | null;
+    };
+};
+
+export type RepositoryLanguages = {
+    totalSize: number;
+    edges: LanguageEdge[];
+};
+
 export type CommitContributionsByRepository = Array<{
     contributions: {
         totalCount: number;
     };
     repository: {
-        primaryLanguage: {
-            name: string;
-            /** "#RRGGBB" */
-            color: string | null;
-        } | null;
+        languages: RepositoryLanguages | null;
     };
 }>;
 
@@ -109,9 +119,15 @@ export const fetchFirst = async (
                         }
                         commitContributionsByRepository(maxRepositories: ${maxReposOneQuery}) {
                             repository {
-                                primaryLanguage {
-                                    name
-                                    color
+                                languages(first: 10) {
+                                    totalSize
+                                    edges {
+                                        size
+                                        node {
+                                            name
+                                            color
+                                        }
+                                    }
                                 }
                             }
                             contributions {

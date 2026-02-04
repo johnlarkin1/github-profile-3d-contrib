@@ -1,3 +1,7 @@
+>[!IMPORTANT]
+> This is a fork of a really nice repo. 
+> I just wanted the simply ability to be able to filter out various programming languages (because I didn't want Jinja)
+
 # GitHub Profile 3D Contrib
 
 ![svg](https://raw.githubusercontent.com/yoshi389111/github-profile-3d-contrib/main/docs/demo/profile-gitblock.svg)

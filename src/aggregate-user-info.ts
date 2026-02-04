@@ -49,28 +49,38 @@ export const aggregateUserInfo = (
             ),
             date: new Date(week.date),
         }));
-    const contributesLanguage: { [language: string]: type.LangInfo } = {};
+    const contributesLanguage: { [language: string]: { color: string; contributions: number } } = {};
     user.contributionsCollection.commitContributionsByRepository
-        .filter((repo) => repo.repository.primaryLanguage)
+        .filter((repo) => repo.repository.languages && repo.repository.languages.totalSize > 0)
         .forEach((repo) => {
-            const language = repo.repository.primaryLanguage?.name || '';
-            const color = repo.repository.primaryLanguage?.color || OTHER_COLOR;
+            const languages = repo.repository.languages!;
+            const totalSize = languages.totalSize;
             const contributions = repo.contributions.totalCount;
 
-            const info = contributesLanguage[language];
-            if (info) {
-                info.contributions += contributions;
-            } else {
-                contributesLanguage[language] = {
-                    language: language,
-                    color: color,
-                    contributions: contributions,
-                };
-            }
+            languages.edges.forEach((edge) => {
+                const language = edge.node.name;
+                const color = edge.node.color || OTHER_COLOR;
+                const proportionalContributions = (edge.size / totalSize) * contributions;
+
+                const info = contributesLanguage[language];
+                if (info) {
+                    info.contributions += proportionalContributions;
+                } else {
+                    contributesLanguage[language] = {
+                        color: color,
+                        contributions: proportionalContributions,
+                    };
+                }
+            });
         });
-    const languages: Array<type.LangInfo> = Object.values(
-        contributesLanguage,
-    ).sort((obj1, obj2) => -compare(obj1.contributions, obj2.contributions));
+    const languages: Array<type.LangInfo> = Object.entries(contributesLanguage)
+        .map(([language, info]) => ({
+            language: language,
+            color: info.color,
+            contributions: Math.round(info.contributions),
+        }))
+        .filter((info) => info.contributions > 0)
+        .sort((obj1, obj2) => -compare(obj1.contributions, obj2.contributions));
 
     const totalForkCount = user.repositories.nodes
         .map((node) => node.forkCount)
