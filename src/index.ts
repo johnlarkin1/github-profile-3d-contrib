@@ -31,6 +31,12 @@ export const main = async (): Promise<void> => {
             core.setFailed('YEAR is NaN');
             return;
         }
+        const excludedLanguages: Set<string> = new Set(
+            (process.env.EXCLUDED_LANGUAGES || '')
+                .split(',')
+                .map((lang) => lang.trim().toLowerCase())
+                .filter((lang) => lang.length > 0),
+        );
 
         const response = await client.fetchData(
             token,
@@ -38,7 +44,7 @@ export const main = async (): Promise<void> => {
             maxRepos,
             year,
         );
-        const userInfo = aggregate.aggregateUserInfo(response);
+        const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages);
 
         if (process.env.SETTING_JSON) {
             const settingFile = r.readSettingJson(process.env.SETTING_JSON);
