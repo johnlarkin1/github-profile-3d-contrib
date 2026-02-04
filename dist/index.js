@@ -53,25 +53,35 @@ const aggregateUserInfo = (response) => {
     }));
     const contributesLanguage = {};
     user.contributionsCollection.commitContributionsByRepository
-        .filter((repo) => repo.repository.primaryLanguage)
+        .filter((repo) => repo.repository.languages && repo.repository.languages.totalSize > 0)
         .forEach((repo) => {
-        var _a, _b;
-        const language = ((_a = repo.repository.primaryLanguage) === null || _a === void 0 ? void 0 : _a.name) || '';
-        const color = ((_b = repo.repository.primaryLanguage) === null || _b === void 0 ? void 0 : _b.color) || OTHER_COLOR;
+        const languages = repo.repository.languages;
+        const totalSize = languages.totalSize;
         const contributions = repo.contributions.totalCount;
-        const info = contributesLanguage[language];
-        if (info) {
-            info.contributions += contributions;
-        }
-        else {
-            contributesLanguage[language] = {
-                language: language,
-                color: color,
-                contributions: contributions,
-            };
-        }
+        languages.edges.forEach((edge) => {
+            const language = edge.node.name;
+            const color = edge.node.color || OTHER_COLOR;
+            const proportionalContributions = (edge.size / totalSize) * contributions;
+            const info = contributesLanguage[language];
+            if (info) {
+                info.contributions += proportionalContributions;
+            }
+            else {
+                contributesLanguage[language] = {
+                    color: color,
+                    contributions: proportionalContributions,
+                };
+            }
+        });
     });
-    const languages = Object.values(contributesLanguage).sort((obj1, obj2) => -compare(obj1.contributions, obj2.contributions));
+    const languages = Object.entries(contributesLanguage)
+        .map(([language, info]) => ({
+        language: language,
+        color: info.color,
+        contributions: Math.round(info.contributions),
+    }))
+        .filter((info) => info.contributions > 0)
+        .sort((obj1, obj2) => -compare(obj1.contributions, obj2.contributions));
     const totalForkCount = user.repositories.nodes
         .map((node) => node.forkCount)
         .reduce((num1, num2) => num1 + num2, 0);
@@ -1071,9 +1081,15 @@ const fetchFirst = async (token, userName, year = null) => {
                         }
                         commitContributionsByRepository(maxRepositories: ${maxReposOneQuery}) {
                             repository {
-                                primaryLanguage {
-                                    name
-                                    color
+                                languages(first: 10) {
+                                    totalSize
+                                    edges {
+                                        size
+                                        node {
+                                            name
+                                            color
+                                        }
+                                    }
                                 }
                             }
                             contributions {
