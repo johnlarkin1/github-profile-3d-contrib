@@ -635,10 +635,12 @@ const d3 = __importStar(__nccwpck_require__(85871));
 const OTHER_NAME = 'other';
 const OTHER_COLOR = '#444444';
 const createPieLanguage = (svg, userInfo, x, y, width, height, settings, isForcedAnimation) => {
+    var _a;
     if (userInfo.totalContributions === 0) {
         return;
     }
-    const languages = userInfo.contributesLanguage.slice(0, 5);
+    const maxLang = (_a = settings.maxLanguages) !== null && _a !== void 0 ? _a : 5;
+    const languages = userInfo.contributesLanguage.slice(0, maxLang);
     const sumContrib = languages
         .map((lang) => lang.contributions)
         .reduce((a, b) => a + b, 0);
@@ -658,7 +660,8 @@ const createPieLanguage = (svg, userInfo, x, y, width, height, settings, isForce
         .join(';');
     const radius = height / 2;
     const margin = radius / 10;
-    const row = 8;
+    // +1 for visual padding; minimum 8 for visual consistency
+    const row = Math.max(languages.length + 1, 8);
     const offset = (row - languages.length) / 2 + 0.5;
     const fontSize = height / row / 1.5;
     const pie = d3
@@ -1298,6 +1301,21 @@ const main = async () => {
             .split(',')
             .map((lang) => lang.trim().toLowerCase())
             .filter((lang) => lang.length > 0));
+        const maxLanguages = process.env.MAX_LANGUAGES
+            ? Number(process.env.MAX_LANGUAGES)
+            : undefined;
+        if (maxLanguages !== undefined &&
+            (Number.isNaN(maxLanguages) || maxLanguages < 1 || maxLanguages > 20)) {
+            core.setFailed('MAX_LANGUAGES must be a number between 1 and 20');
+            return;
+        }
+        // Helper to merge maxLanguages into settings
+        const mergeSettings = (settings) => {
+            if (maxLanguages === undefined) {
+                return settings;
+            }
+            return { ...settings, maxLanguages };
+        };
         const response = await client.fetchData(token, userName, maxRepos, year);
         const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages);
         if (process.env.SETTING_JSON) {
@@ -1305,25 +1323,25 @@ const main = async () => {
             const settingInfos = 'length' in settingFile ? settingFile : [settingFile];
             for (const settingInfo of settingInfos) {
                 const fileName = settingInfo.fileName || 'profile-customize.svg';
-                f.writeFile(fileName, create.createSvg(userInfo, settingInfo, false));
+                f.writeFile(fileName, create.createSvg(userInfo, mergeSettings(settingInfo), false));
             }
         }
         else {
             const settings = userInfo.isHalloween
                 ? template.HalloweenSettings
                 : template.NormalSettings;
-            f.writeFile('profile-green-animate.svg', create.createSvg(userInfo, settings, true));
-            f.writeFile('profile-green.svg', create.createSvg(userInfo, settings, false));
+            f.writeFile('profile-green-animate.svg', create.createSvg(userInfo, mergeSettings(settings), true));
+            f.writeFile('profile-green.svg', create.createSvg(userInfo, mergeSettings(settings), false));
             // Northern hemisphere
-            f.writeFile('profile-season-animate.svg', create.createSvg(userInfo, template.NorthSeasonSettings, true));
-            f.writeFile('profile-season.svg', create.createSvg(userInfo, template.NorthSeasonSettings, false));
+            f.writeFile('profile-season-animate.svg', create.createSvg(userInfo, mergeSettings(template.NorthSeasonSettings), true));
+            f.writeFile('profile-season.svg', create.createSvg(userInfo, mergeSettings(template.NorthSeasonSettings), false));
             // Southern hemisphere
-            f.writeFile('profile-south-season-animate.svg', create.createSvg(userInfo, template.SouthSeasonSettings, true));
-            f.writeFile('profile-south-season.svg', create.createSvg(userInfo, template.SouthSeasonSettings, false));
-            f.writeFile('profile-night-view.svg', create.createSvg(userInfo, template.NightViewSettings, true));
-            f.writeFile('profile-night-green.svg', create.createSvg(userInfo, template.NightGreenSettings, true));
-            f.writeFile('profile-night-rainbow.svg', create.createSvg(userInfo, template.NightRainbowSettings, true));
-            f.writeFile('profile-gitblock.svg', create.createSvg(userInfo, template.GitBlockSettings, true));
+            f.writeFile('profile-south-season-animate.svg', create.createSvg(userInfo, mergeSettings(template.SouthSeasonSettings), true));
+            f.writeFile('profile-south-season.svg', create.createSvg(userInfo, mergeSettings(template.SouthSeasonSettings), false));
+            f.writeFile('profile-night-view.svg', create.createSvg(userInfo, mergeSettings(template.NightViewSettings), true));
+            f.writeFile('profile-night-green.svg', create.createSvg(userInfo, mergeSettings(template.NightGreenSettings), true));
+            f.writeFile('profile-night-rainbow.svg', create.createSvg(userInfo, mergeSettings(template.NightRainbowSettings), true));
+            f.writeFile('profile-gitblock.svg', create.createSvg(userInfo, mergeSettings(template.GitBlockSettings), true));
         }
     }
     catch (error) {

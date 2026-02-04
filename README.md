@@ -1,6 +1,11 @@
 >[!IMPORTANT]
 > This is a fork of a really nice repo. 
-> I just wanted the simply ability to be able to filter out various programming languages (because I didn't want Jinja)
+> I just wanted the simply ability to be able to filter out various programming languages (because I didn't want HTML showing up when I accidentally had it checked in (and i potentially didn't want the claude generated SCSS from my blog))
+>
+> Now things have kinda gotten away and this has 
+> * EXCLUDED_LANGAUGES as an environment variable
+> * a more accurate breakdown of the language counter
+> * the option to show more than 5 specific languages
 
 # GitHub Profile 3D Contrib
 
@@ -103,6 +108,7 @@ In the sample, only `GITHUB_TOKEN` and `USERNAME` are specified as environment v
 - `GITHUB_ENDPOINT` : (optional) Github GraphQL endpoint. For example, if you want to create a contribution calendar based on your company's GitHub Enterprise activity instead of GitHub.com, set this environment variable. e.g. `https://github.mycompany.com/api/graphql` - since ver. 0.8.0
 - `YEAR` : (optional) For past calendars, specify the year. This is intended to be specified when running the tool from the command line. - since ver. 0.8.0
 - `EXCLUDED_LANGUAGES` : (optional) comma-separated list of languages to exclude from the language statistics pie chart. Case-insensitive. Related languages are also excluded (e.g., excluding "typescript" also excludes "tsx", excluding "python" also excludes "jupyter notebook"). Example: `HTML,CSS,Markdown,Jinja`
+- `MAX_LANGUAGES` : (optional) Maximum number of programming languages to show in the pie chart before grouping the rest into "other". Default is 5. Valid range: 1-20.
 
 #### About `GITHUB_TOKEN`
 
