@@ -4,6 +4,15 @@ import * as type from './type';
 const OTHER_NAME = 'other';
 const OTHER_COLOR = '#444444';
 
+const formatPercentage = (value: number, total: number): string => {
+    if (total === 0) return '0%';
+    const percent = (value / total) * 100;
+    if (percent < 1 && percent > 0) {
+        return '< 1%';
+    }
+    return `${Math.round(percent)}%`;
+};
+
 export const createPieLanguage = (
     svg: d3.Selection<SVGSVGElement, unknown, null, unknown>,
     userInfo: type.UserInfo,
@@ -31,6 +40,11 @@ export const createPieLanguage = (
             contributions: otherContributions,
         });
     }
+
+    const totalForPercentage = languages.reduce(
+        (sum, lang) => sum + lang.contributions,
+        0
+    );
 
     const isAnimate = settings.growingAnimation || isForcedAnimation;
     const animeSteps = 5;
@@ -89,7 +103,10 @@ export const createPieLanguage = (
         .enter()
         .append('text')
         .attr('dominant-baseline', 'middle')
-        .text((d) => d.data.language)
+        .text(
+            (d) =>
+                `${d.data.language} ${formatPercentage(d.data.contributions, totalForPercentage)}`
+        )
         .attr('x', fontSize * 1.2)
         .attr('y', (d) => (d.index + offset) * (height / row))
         .attr('class', 'fill-fg')
@@ -122,7 +139,10 @@ export const createPieLanguage = (
         .attr('stroke-width', '2px');
     paths
         .append('title')
-        .text((d) => `${d.data.language} ${d.data.contributions}`);
+        .text(
+            (d) =>
+                `${d.data.language}: ${d.data.contributions} commits (${formatPercentage(d.data.contributions, totalForPercentage)})`
+        );
     if (isAnimate) {
         paths
             .append('animate')
