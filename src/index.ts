@@ -38,6 +38,25 @@ export const main = async (): Promise<void> => {
                 .filter((lang) => lang.length > 0),
         );
 
+        const maxLanguages = process.env.MAX_LANGUAGES
+            ? Number(process.env.MAX_LANGUAGES)
+            : undefined;
+        if (
+            maxLanguages !== undefined &&
+            (Number.isNaN(maxLanguages) || maxLanguages < 1 || maxLanguages > 20)
+        ) {
+            core.setFailed('MAX_LANGUAGES must be a number between 1 and 20');
+            return;
+        }
+
+        // Helper to merge maxLanguages into settings
+        const mergeSettings = <T>(settings: T): T => {
+            if (maxLanguages === undefined) {
+                return settings;
+            }
+            return { ...settings, maxLanguages };
+        };
+
         const response = await client.fetchData(
             token,
             userName,
@@ -55,7 +74,7 @@ export const main = async (): Promise<void> => {
                     settingInfo.fileName || 'profile-customize.svg';
                 f.writeFile(
                     fileName,
-                    create.createSvg(userInfo, settingInfo, false),
+                    create.createSvg(userInfo, mergeSettings(settingInfo), false),
                 );
             }
         } else {
@@ -65,51 +84,51 @@ export const main = async (): Promise<void> => {
 
             f.writeFile(
                 'profile-green-animate.svg',
-                create.createSvg(userInfo, settings, true),
+                create.createSvg(userInfo, mergeSettings(settings), true),
             );
             f.writeFile(
                 'profile-green.svg',
-                create.createSvg(userInfo, settings, false),
+                create.createSvg(userInfo, mergeSettings(settings), false),
             );
 
             // Northern hemisphere
             f.writeFile(
                 'profile-season-animate.svg',
-                create.createSvg(userInfo, template.NorthSeasonSettings, true),
+                create.createSvg(userInfo, mergeSettings(template.NorthSeasonSettings), true),
             );
             f.writeFile(
                 'profile-season.svg',
-                create.createSvg(userInfo, template.NorthSeasonSettings, false),
+                create.createSvg(userInfo, mergeSettings(template.NorthSeasonSettings), false),
             );
 
             // Southern hemisphere
             f.writeFile(
                 'profile-south-season-animate.svg',
-                create.createSvg(userInfo, template.SouthSeasonSettings, true),
+                create.createSvg(userInfo, mergeSettings(template.SouthSeasonSettings), true),
             );
             f.writeFile(
                 'profile-south-season.svg',
-                create.createSvg(userInfo, template.SouthSeasonSettings, false),
+                create.createSvg(userInfo, mergeSettings(template.SouthSeasonSettings), false),
             );
 
             f.writeFile(
                 'profile-night-view.svg',
-                create.createSvg(userInfo, template.NightViewSettings, true),
+                create.createSvg(userInfo, mergeSettings(template.NightViewSettings), true),
             );
 
             f.writeFile(
                 'profile-night-green.svg',
-                create.createSvg(userInfo, template.NightGreenSettings, true),
+                create.createSvg(userInfo, mergeSettings(template.NightGreenSettings), true),
             );
 
             f.writeFile(
                 'profile-night-rainbow.svg',
-                create.createSvg(userInfo, template.NightRainbowSettings, true),
+                create.createSvg(userInfo, mergeSettings(template.NightRainbowSettings), true),
             );
 
             f.writeFile(
                 'profile-gitblock.svg',
-                create.createSvg(userInfo, template.GitBlockSettings, true),
+                create.createSvg(userInfo, mergeSettings(template.GitBlockSettings), true),
             );
         }
     } catch (error) {

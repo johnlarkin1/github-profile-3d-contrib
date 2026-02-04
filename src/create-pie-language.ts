@@ -18,7 +18,8 @@ export const createPieLanguage = (
         return;
     }
 
-    const languages = userInfo.contributesLanguage.slice(0, 5);
+    const maxLang = settings.maxLanguages ?? 5;
+    const languages = userInfo.contributesLanguage.slice(0, maxLang);
     const sumContrib = languages
         .map((lang) => lang.contributions)
         .reduce((a, b) => a + b, 0);
@@ -42,7 +43,8 @@ export const createPieLanguage = (
     const radius = height / 2;
     const margin = radius / 10;
 
-    const row = 8;
+    // +1 for visual padding; minimum 8 for visual consistency
+    const row = Math.max(languages.length + 1, 8);
     const offset = (row - languages.length) / 2 + 0.5;
     const fontSize = height / row / 1.5;
 

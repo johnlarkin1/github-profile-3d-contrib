@@ -57,6 +57,9 @@ export interface PieLangSettings {
     growingAnimation?: boolean;
 
     fileName?: string;
+
+    /** Maximum languages to show before grouping into "other" (default 5, range 1-20) */
+    maxLanguages?: number;
 }
 
 export interface BaseSettings extends RadarContribSettings, PieLangSettings {
