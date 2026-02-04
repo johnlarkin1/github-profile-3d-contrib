@@ -634,6 +634,15 @@ exports.createPieLanguage = void 0;
 const d3 = __importStar(__nccwpck_require__(85871));
 const OTHER_NAME = 'other';
 const OTHER_COLOR = '#444444';
+const formatPercentage = (value, total) => {
+    if (total === 0)
+        return '0%';
+    const percent = (value / total) * 100;
+    if (percent < 1 && percent > 0) {
+        return '< 1%';
+    }
+    return `${Math.round(percent)}%`;
+};
 const createPieLanguage = (svg, userInfo, x, y, width, height, settings, isForcedAnimation) => {
     var _a;
     if (userInfo.totalContributions === 0) {
@@ -652,6 +661,7 @@ const createPieLanguage = (svg, userInfo, x, y, width, height, settings, isForce
             contributions: otherContributions,
         });
     }
+    const totalForPercentage = languages.reduce((sum, lang) => sum + lang.contributions, 0);
     const isAnimate = settings.growingAnimation || isForcedAnimation;
     const animeSteps = 5;
     const animateOpacity = (num) => Array(languages.length + animeSteps)
@@ -701,7 +711,7 @@ const createPieLanguage = (svg, userInfo, x, y, width, height, settings, isForce
         .enter()
         .append('text')
         .attr('dominant-baseline', 'middle')
-        .text((d) => d.data.language)
+        .text((d) => `${d.data.language} ${formatPercentage(d.data.contributions, totalForPercentage)}`)
         .attr('x', fontSize * 1.2)
         .attr('y', (d) => (d.index + offset) * (height / row))
         .attr('class', 'fill-fg')
@@ -732,7 +742,7 @@ const createPieLanguage = (svg, userInfo, x, y, width, height, settings, isForce
         .attr('stroke-width', '2px');
     paths
         .append('title')
-        .text((d) => `${d.data.language} ${d.data.contributions}`);
+        .text((d) => `${d.data.language}: ${d.data.contributions} commits (${formatPercentage(d.data.contributions, totalForPercentage)})`);
     if (isAnimate) {
         paths
             .append('animate')
