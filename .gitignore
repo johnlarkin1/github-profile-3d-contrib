@@ -192,3 +192,6 @@ $RECYCLE.BIN/
 .history/
 
 profile-3d-contrib/
+
+# Git worktrees
+.worktrees/
