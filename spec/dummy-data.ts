@@ -2080,6 +2080,7 @@ export const dummyData: client.ResponseType = {
                 "commitContributionsByRepository": [
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-1",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2093,6 +2094,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-2",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2106,6 +2108,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-3",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2119,6 +2122,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-4",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2132,6 +2136,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-5",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2145,6 +2150,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-6",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2158,6 +2164,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-7",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2171,6 +2178,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-8",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2184,6 +2192,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-9",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2197,6 +2206,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-10",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2210,6 +2220,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-11",
                             "languages": null
                         },
                         "contributions": {
@@ -2218,6 +2229,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-12",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2231,6 +2243,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-13",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [
@@ -2244,6 +2257,7 @@ export const dummyData: client.ResponseType = {
                     },
                     {
                         "repository": {
+                            "nameWithOwner": "user/repo-14",
                             "languages": {
                                 "totalSize": 10000,
                                 "edges": [

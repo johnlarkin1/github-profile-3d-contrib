@@ -12,52 +12,62 @@ describe('github-graphql', () => {
             {
                 "language": "Jupyter Notebook",
                 "color": "#DA5B0B",
-                "contributions": 108
+                "contributions": 108,
+                "repoCount": 1
             },
             {
                 "language": "Perl",
                 "color": "#0298c3",
-                "contributions": 73
+                "contributions": 73,
+                "repoCount": 1
             },
             {
                 "language": "Kotlin",
                 "color": "#F18E33",
-                "contributions": 58
+                "contributions": 58,
+                "repoCount": 1
             },
             {
                 "language": "TypeScript",
                 "color": "#2b7489",
-                "contributions": 31
+                "contributions": 31,
+                "repoCount": 2
             },
             {
                 "language": "Java",
                 "color": "#b07219",
-                "contributions": 28
+                "contributions": 28,
+                "repoCount": 2
             },
             {
                 "language": "Go",
                 "color": "#00ADD8",
-                "contributions": 20
+                "contributions": 20,
+                "repoCount": 2
             },
             {
                 "language": "Python",
                 "color": "#3572A5",
-                "contributions": 10
+                "contributions": 10,
+                "repoCount": 1
             },
             {
                 "language": "JavaScript",
                 "color": "#f1e05a",
-                "contributions": 7
+                "contributions": 7,
+                "repoCount": 1
             },
             {
                 "language": "C",
                 "color": "#555555",
-                "contributions": 4
+                "contributions": 4,
+                "repoCount": 1
             },
             {
                 "language": "Ruby",
                 "color": "#701516",
-                "contributions": 1
+                "contributions": 1,
+                "repoCount": 1
             }
         ];
         expect(userInfo.contributesLanguage).toEqual(languages);

@@ -5,6 +5,7 @@ import * as create from './create-svg';
 import * as f from './file-writer';
 import * as r from './settings-reader';
 import * as client from './github-graphql';
+import * as report from './create-language-report';
 
 export const main = async (): Promise<void> => {
     try {
@@ -64,6 +65,21 @@ export const main = async (): Promise<void> => {
             year,
         );
         const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages);
+
+        // Generate language distribution report
+        const expandedExclusions = aggregate.expandExcludedLanguages(excludedLanguages);
+        const reportData = report.generateLanguageReport(response, excludedLanguages, expandedExclusions);
+        const reportContent = report.formatReport(reportData);
+        f.writeFile('language-report.md', reportContent);
+        console.log('Language report written to profile-3d-contrib/language-report.md');
+
+        // Also log a quick summary to the action output
+        console.log('\n=== Language Distribution Summary ===');
+        for (const lang of reportData.aggregatedLanguages.slice(0, 10)) {
+            console.log(`  ${lang.language}: ${lang.percentage.toFixed(1)}% (${lang.repos.length} repos)`);
+        }
+        console.log(`  Total repos analyzed: ${reportData.totalReposAnalyzed}`);
+        console.log('=====================================\n');
 
         if (process.env.SETTING_JSON) {
             const settingFile = r.readSettingJson(process.env.SETTING_JSON);
