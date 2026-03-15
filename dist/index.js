@@ -78,7 +78,7 @@ const compare = (num1, num2) => {
         return 0;
     }
 };
-const aggregateUserInfo = (response, excludedLanguages = new Set()) => {
+const aggregateUserInfo = (response, excludedLanguages = new Set(), languageColors = new Map()) => {
     if (!response.data) {
         if (response.errors && response.errors.length) {
             throw new Error(response.errors[0].message);
@@ -113,7 +113,8 @@ const aggregateUserInfo = (response, excludedLanguages = new Set()) => {
         }
         includedEdges.forEach((edge) => {
             const language = edge.node.name;
-            const color = edge.node.color || OTHER_COLOR;
+            const apiColor = edge.node.color || OTHER_COLOR;
+            const color = languageColors.get(language.toLowerCase()) || apiColor;
             const proportionalContributions = (edge.size / adjustedTotalSize) * contributions;
             const info = contributesLanguage[language];
             if (info) {
@@ -1475,6 +1476,21 @@ const main = async () => {
             .split(',')
             .map((lang) => lang.trim().toLowerCase())
             .filter((lang) => lang.length > 0));
+        const languageColors = new Map();
+        (process.env.LANGUAGE_COLORS || '')
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0)
+            .forEach((entry) => {
+            const colonIndex = entry.indexOf(':');
+            if (colonIndex > 0) {
+                const lang = entry.substring(0, colonIndex).trim().toLowerCase();
+                const color = entry.substring(colonIndex + 1).trim();
+                if (/^#[0-9a-fA-F]{3,8}$/.test(color)) {
+                    languageColors.set(lang, color);
+                }
+            }
+        });
         const maxLanguages = process.env.MAX_LANGUAGES
             ? Number(process.env.MAX_LANGUAGES)
             : undefined;
@@ -1491,7 +1507,7 @@ const main = async () => {
             return { ...settings, maxLanguages };
         };
         const response = await client.fetchData(token, userName, maxRepos, year);
-        const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages);
+        const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages, languageColors);
         // Generate language distribution report
         const expandedExclusions = aggregate.expandExcludedLanguages(excludedLanguages);
         const reportData = report.generateLanguageReport(response, excludedLanguages, expandedExclusions);
