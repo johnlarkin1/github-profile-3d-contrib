@@ -91,6 +91,7 @@ Tests are in `/spec/` directory with `.spec.ts` suffix. Uses `spec/dummy-data.ts
 - `GITHUB_ENDPOINT` - For GitHub Enterprise support
 - `EXCLUDED_LANGUAGES` - Comma-separated list of languages to exclude from pie chart (case-insensitive)
 - `MAX_LANGUAGES` - Maximum languages in pie chart before "other" (default 5, range 1-20)
+- `LANGUAGE_COLORS` - Comma-separated `language:color` pairs to override GitHub API colors (e.g., `Python:#ff6600,TypeScript:#3178c6`)
 
 ### Language Aliases
 

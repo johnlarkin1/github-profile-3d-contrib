@@ -78,6 +78,7 @@ const compare = (num1: number, num2: number): number => {
 export const aggregateUserInfo = (
     response: client.ResponseType,
     excludedLanguages: Set<string> = new Set(),
+    languageColors: Map<string, string> = new Map(),
 ): type.UserInfo => {
     if (!response.data) {
         if (response.errors && response.errors.length) {
@@ -122,7 +123,8 @@ export const aggregateUserInfo = (
 
             includedEdges.forEach((edge) => {
                 const language = edge.node.name;
-                const color = edge.node.color || OTHER_COLOR;
+                const apiColor = edge.node.color || OTHER_COLOR;
+                const color = languageColors.get(language.toLowerCase()) || apiColor;
                 const proportionalContributions = (edge.size / adjustedTotalSize) * contributions;
 
                 const info = contributesLanguage[language];
