@@ -39,6 +39,22 @@ export const main = async (): Promise<void> => {
                 .filter((lang) => lang.length > 0),
         );
 
+        const languageColors = new Map<string, string>();
+        (process.env.LANGUAGE_COLORS || '')
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0)
+            .forEach((entry) => {
+                const colonIndex = entry.indexOf(':');
+                if (colonIndex > 0) {
+                    const lang = entry.substring(0, colonIndex).trim().toLowerCase();
+                    const color = entry.substring(colonIndex + 1).trim();
+                    if (/^#[0-9a-fA-F]{3,8}$/.test(color)) {
+                        languageColors.set(lang, color);
+                    }
+                }
+            });
+
         const maxLanguages = process.env.MAX_LANGUAGES
             ? Number(process.env.MAX_LANGUAGES)
             : undefined;
@@ -64,7 +80,7 @@ export const main = async (): Promise<void> => {
             maxRepos,
             year,
         );
-        const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages);
+        const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages, languageColors);
 
         // Generate language distribution report
         const expandedExclusions = aggregate.expandExcludedLanguages(excludedLanguages);

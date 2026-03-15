@@ -179,6 +179,42 @@ describe('github-graphql', () => {
         expect(userInfo.contributesLanguage.find(l => l.language === 'TypeScript')).toBeDefined();
     });
 
+    it('applies language color overrides', () => {
+        const languageColors = new Map([['python', '#ff6600']]);
+        const userInfo = aggregate.aggregateUserInfo(dummyData, new Set(), languageColors);
+
+        const pythonEntry = userInfo.contributesLanguage.find(l => l.language === 'Python');
+        expect(pythonEntry).toBeDefined();
+        expect(pythonEntry!.color).toBe('#ff6600');
+
+        // Non-overridden languages keep their API colors
+        const perlEntry = userInfo.contributesLanguage.find(l => l.language === 'Perl');
+        expect(perlEntry).toBeDefined();
+        expect(perlEntry!.color).toBe('#0298c3');
+    });
+
+    it('applies color overrides case-insensitively', () => {
+        const languageColors = new Map([['typescript', '#00ff00']]);
+        const userInfo = aggregate.aggregateUserInfo(dummyData, new Set(), languageColors);
+
+        const tsEntry = userInfo.contributesLanguage.find(l => l.language === 'TypeScript');
+        expect(tsEntry).toBeDefined();
+        expect(tsEntry!.color).toBe('#00ff00');
+    });
+
+    it('applies multiple color overrides', () => {
+        const languageColors = new Map([
+            ['python', '#ff6600'],
+            ['go', '#00ff00'],
+        ]);
+        const userInfo = aggregate.aggregateUserInfo(dummyData, new Set(), languageColors);
+
+        expect(userInfo.contributesLanguage.find(l => l.language === 'Python')!.color).toBe('#ff6600');
+        expect(userInfo.contributesLanguage.find(l => l.language === 'Go')!.color).toBe('#00ff00');
+        // Others unchanged
+        expect(userInfo.contributesLanguage.find(l => l.language === 'Java')!.color).toBe('#b07219');
+    });
+
     it('excludes C alias C++ when C is excluded', () => {
         // C and C++ are aliased together
         const excludedLanguages = new Set(['c']);
