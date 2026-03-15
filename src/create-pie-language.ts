@@ -104,8 +104,14 @@ export const createPieLanguage = (
         .append('text')
         .attr('dominant-baseline', 'middle')
         .text(
-            (d) =>
-                `${d.data.language} ${formatPercentage(d.data.contributions, totalForPercentage)}`
+            (d) => {
+                const pct = formatPercentage(d.data.contributions, totalForPercentage);
+                const repos = d.data.repoCount;
+                if (repos && d.data.language !== OTHER_NAME) {
+                    return `${d.data.language} ${pct} (${repos} ${repos === 1 ? 'repo' : 'repos'})`;
+                }
+                return `${d.data.language} ${pct}`;
+            }
         )
         .attr('x', fontSize * 1.2)
         .attr('y', (d) => (d.index + offset) * (height / row))

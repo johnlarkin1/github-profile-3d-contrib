@@ -8,6 +8,7 @@ export interface LangInfo {
     language: string;
     color: string;
     contributions: number;
+    repoCount?: number;
 }
 
 export interface UserInfo {

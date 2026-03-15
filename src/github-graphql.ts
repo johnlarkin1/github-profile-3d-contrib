@@ -24,6 +24,7 @@ export type CommitContributionsByRepository = Array<{
         totalCount: number;
     };
     repository: {
+        nameWithOwner: string;
         languages: RepositoryLanguages | null;
     };
 }>;
@@ -119,6 +120,7 @@ export const fetchFirst = async (
                         }
                         commitContributionsByRepository(maxRepositories: ${maxReposOneQuery}) {
                             repository {
+                                nameWithOwner
                                 languages(first: 10) {
                                     totalSize
                                     edges {

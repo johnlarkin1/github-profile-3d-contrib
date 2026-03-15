@@ -7,7 +7,7 @@
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.aggregateUserInfo = void 0;
+exports.aggregateUserInfo = exports.expandExcludedLanguages = void 0;
 const OTHER_COLOR = '#444444';
 // Language alias mapping: maps variant languages to their canonical form for exclusion
 // When a user excludes "typescript", it also excludes "tsx"
@@ -52,6 +52,7 @@ const expandExcludedLanguages = (excludedLanguages) => {
     }
     return expanded;
 };
+exports.expandExcludedLanguages = expandExcludedLanguages;
 const toNumberContributionLevel = (level) => {
     switch (level) {
         case 'NONE':
@@ -87,7 +88,7 @@ const aggregateUserInfo = (response, excludedLanguages = new Set()) => {
         }
     }
     // Expand excluded languages to include their aliases
-    const expandedExclusions = expandExcludedLanguages(excludedLanguages);
+    const expandedExclusions = (0, exports.expandExcludedLanguages)(excludedLanguages);
     const user = response.data.user;
     const calendar = user.contributionsCollection.contributionCalendar.weeks
         .flatMap((week) => week.contributionDays)
@@ -102,6 +103,7 @@ const aggregateUserInfo = (response, excludedLanguages = new Set()) => {
         .forEach((repo) => {
         const languages = repo.repository.languages;
         const contributions = repo.contributions.totalCount;
+        const repoName = repo.repository.nameWithOwner;
         // Filter out excluded languages (using expanded set with aliases)
         const includedEdges = languages.edges.filter((edge) => !expandedExclusions.has(edge.node.name.toLowerCase()));
         // Recalculate total size from included languages only
@@ -116,11 +118,13 @@ const aggregateUserInfo = (response, excludedLanguages = new Set()) => {
             const info = contributesLanguage[language];
             if (info) {
                 info.contributions += proportionalContributions;
+                info.repos.add(repoName);
             }
             else {
                 contributesLanguage[language] = {
                     color: color,
                     contributions: proportionalContributions,
+                    repos: new Set([repoName]),
                 };
             }
         });
@@ -130,6 +134,7 @@ const aggregateUserInfo = (response, excludedLanguages = new Set()) => {
         language: language,
         color: info.color,
         contributions: Math.round(info.contributions),
+        repoCount: info.repos.size,
     }))
         .filter((info) => info.contributions > 0)
         .sort((obj1, obj2) => -compare(obj1.contributions, obj2.contributions));
@@ -601,6 +606,156 @@ exports.createCssColors = createCssColors;
 
 /***/ }),
 
+/***/ 55985:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.formatReport = exports.generateLanguageReport = void 0;
+const generateLanguageReport = (response, excludedLanguages, expandedExclusions) => {
+    const user = response.data.user;
+    const repos = user.contributionsCollection.commitContributionsByRepository;
+    const repoBreakdowns = [];
+    let totalReposSkipped = 0;
+    // Per-language accumulator
+    const langAccum = {};
+    for (const repo of repos) {
+        const repoName = repo.repository.nameWithOwner;
+        const commits = repo.contributions.totalCount;
+        const languages = repo.repository.languages;
+        if (!languages || languages.totalSize === 0) {
+            totalReposSkipped++;
+            continue;
+        }
+        const includedEdges = languages.edges.filter((edge) => !expandedExclusions.has(edge.node.name.toLowerCase()));
+        const adjustedTotalSize = includedEdges.reduce((sum, edge) => sum + edge.size, 0);
+        if (adjustedTotalSize === 0) {
+            totalReposSkipped++;
+            continue;
+        }
+        const breakdown = {
+            repoName,
+            commits,
+            totalBytes: adjustedTotalSize,
+            languages: includedEdges.map((edge) => {
+                const pct = edge.size / adjustedTotalSize;
+                const weighted = pct * commits;
+                return {
+                    name: edge.node.name,
+                    bytes: edge.size,
+                    percentage: pct * 100,
+                    weightedContributions: weighted,
+                };
+            }),
+        };
+        repoBreakdowns.push(breakdown);
+        // Accumulate per-language
+        for (const lang of breakdown.languages) {
+            if (!langAccum[lang.name]) {
+                langAccum[lang.name] = { totalWeighted: 0, repos: [] };
+            }
+            langAccum[lang.name].totalWeighted += lang.weightedContributions;
+            langAccum[lang.name].repos.push({
+                name: repoName,
+                contributions: lang.weightedContributions,
+                bytes: lang.bytes,
+            });
+        }
+    }
+    // Sort repos by commit count descending
+    repoBreakdowns.sort((a, b) => b.commits - a.commits);
+    // Build aggregated view
+    const totalWeighted = Object.values(langAccum).reduce((sum, l) => sum + l.totalWeighted, 0);
+    const aggregatedLanguages = Object.entries(langAccum)
+        .map(([language, data]) => ({
+        language,
+        totalWeightedContributions: data.totalWeighted,
+        percentage: totalWeighted > 0 ? (data.totalWeighted / totalWeighted) * 100 : 0,
+        repos: data.repos.sort((a, b) => b.contributions - a.contributions),
+    }))
+        .sort((a, b) => b.totalWeightedContributions - a.totalWeightedContributions);
+    return {
+        repoBreakdowns,
+        aggregatedLanguages,
+        excludedLanguages: Array.from(excludedLanguages),
+        totalReposAnalyzed: repoBreakdowns.length,
+        totalReposSkipped,
+    };
+};
+exports.generateLanguageReport = generateLanguageReport;
+const formatNumber = (n) => {
+    if (Number.isInteger(n))
+        return n.toString();
+    return n.toFixed(2);
+};
+const formatBytes = (bytes) => {
+    if (bytes < 1024)
+        return `${bytes} B`;
+    if (bytes < 1024 * 1024)
+        return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+const formatReport = (data) => {
+    const lines = [];
+    lines.push('# Language Distribution Report');
+    lines.push('');
+    lines.push(`Generated: ${new Date().toISOString()}`);
+    lines.push('');
+    lines.push(`- **Repos analyzed:** ${data.totalReposAnalyzed}`);
+    lines.push(`- **Repos skipped** (no language data or all excluded): ${data.totalReposSkipped}`);
+    lines.push(`- **Excluded languages:** ${data.excludedLanguages.length > 0 ? data.excludedLanguages.join(', ') : 'none'}`);
+    lines.push('');
+    // === Aggregated language summary ===
+    lines.push('## Language Summary (Weighted by Commits)');
+    lines.push('');
+    lines.push('| Rank | Language | Weighted Contributions | % | # Repos |');
+    lines.push('|------|----------|----------------------|---|---------|');
+    data.aggregatedLanguages.forEach((lang, i) => {
+        lines.push(`| ${i + 1} | ${lang.language} | ${formatNumber(lang.totalWeightedContributions)} | ${lang.percentage.toFixed(1)}% | ${lang.repos.length} |`);
+    });
+    lines.push('');
+    // === Per-language detail: top repos ===
+    lines.push('## Per-Language Breakdown (Top Repos)');
+    lines.push('');
+    for (const lang of data.aggregatedLanguages) {
+        lines.push(`### ${lang.language} — ${lang.percentage.toFixed(1)}%`);
+        lines.push('');
+        lines.push('| Repo | Weighted Contributions | Bytes |');
+        lines.push('|------|----------------------|-------|');
+        // Show top 10 repos per language
+        for (const repo of lang.repos.slice(0, 10)) {
+            lines.push(`| ${repo.name} | ${formatNumber(repo.contributions)} | ${formatBytes(repo.bytes)} |`);
+        }
+        if (lang.repos.length > 10) {
+            lines.push(`| ... and ${lang.repos.length - 10} more repos | | |`);
+        }
+        lines.push('');
+    }
+    // === Per-repo detail ===
+    lines.push('## Per-Repo Breakdown (Top 30 by Commits)');
+    lines.push('');
+    for (const repo of data.repoBreakdowns.slice(0, 30)) {
+        lines.push(`### ${repo.repoName} — ${repo.commits} commits`);
+        lines.push('');
+        lines.push('| Language | Bytes | % of Repo | Weighted Contributions |');
+        lines.push('|----------|-------|-----------|----------------------|');
+        for (const lang of repo.languages) {
+            lines.push(`| ${lang.name} | ${formatBytes(lang.bytes)} | ${lang.percentage.toFixed(1)}% | ${formatNumber(lang.weightedContributions)} |`);
+        }
+        lines.push('');
+    }
+    if (data.repoBreakdowns.length > 30) {
+        lines.push(`*...and ${data.repoBreakdowns.length - 30} more repos*`);
+        lines.push('');
+    }
+    return lines.join('\n');
+};
+exports.formatReport = formatReport;
+//# sourceMappingURL=create-language-report.js.map
+
+/***/ }),
+
 /***/ 40855:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -711,7 +866,14 @@ const createPieLanguage = (svg, userInfo, x, y, width, height, settings, isForce
         .enter()
         .append('text')
         .attr('dominant-baseline', 'middle')
-        .text((d) => `${d.data.language} ${formatPercentage(d.data.contributions, totalForPercentage)}`)
+        .text((d) => {
+        const pct = formatPercentage(d.data.contributions, totalForPercentage);
+        const repos = d.data.repoCount;
+        if (repos && d.data.language !== OTHER_NAME) {
+            return `${d.data.language} ${pct} (${repos} ${repos === 1 ? 'repo' : 'repos'})`;
+        }
+        return `${d.data.language} ${pct}`;
+    })
         .attr('x', fontSize * 1.2)
         .attr('y', (d) => (d.index + offset) * (height / row))
         .attr('class', 'fill-fg')
@@ -1145,6 +1307,7 @@ const fetchFirst = async (token, userName, year = null) => {
                         }
                         commitContributionsByRepository(maxRepositories: ${maxReposOneQuery}) {
                             repository {
+                                nameWithOwner
                                 languages(first: 10) {
                                     totalSize
                                     edges {
@@ -1283,6 +1446,7 @@ const create = __importStar(__nccwpck_require__(63336));
 const f = __importStar(__nccwpck_require__(46045));
 const r = __importStar(__nccwpck_require__(11820));
 const client = __importStar(__nccwpck_require__(54652));
+const report = __importStar(__nccwpck_require__(55985));
 const main = async () => {
     try {
         const token = process.env.GITHUB_TOKEN;
@@ -1328,6 +1492,19 @@ const main = async () => {
         };
         const response = await client.fetchData(token, userName, maxRepos, year);
         const userInfo = aggregate.aggregateUserInfo(response, excludedLanguages);
+        // Generate language distribution report
+        const expandedExclusions = aggregate.expandExcludedLanguages(excludedLanguages);
+        const reportData = report.generateLanguageReport(response, excludedLanguages, expandedExclusions);
+        const reportContent = report.formatReport(reportData);
+        f.writeFile('language-report.md', reportContent);
+        console.log('Language report written to profile-3d-contrib/language-report.md');
+        // Also log a quick summary to the action output
+        console.log('\n=== Language Distribution Summary ===');
+        for (const lang of reportData.aggregatedLanguages.slice(0, 10)) {
+            console.log(`  ${lang.language}: ${lang.percentage.toFixed(1)}% (${lang.repos.length} repos)`);
+        }
+        console.log(`  Total repos analyzed: ${reportData.totalReposAnalyzed}`);
+        console.log('=====================================\n');
         if (process.env.SETTING_JSON) {
             const settingFile = r.readSettingJson(process.env.SETTING_JSON);
             const settingInfos = 'length' in settingFile ? settingFile : [settingFile];

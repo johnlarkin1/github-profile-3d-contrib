@@ -34,7 +34,7 @@ const buildAliasLookup = (): Map<string, string[]> => {
 const ALIAS_LOOKUP = buildAliasLookup();
 
 // Expand a set of excluded languages to include their aliases
-const expandExcludedLanguages = (excludedLanguages: Set<string>): Set<string> => {
+export const expandExcludedLanguages = (excludedLanguages: Set<string>): Set<string> => {
     const expanded = new Set<string>();
     for (const lang of excludedLanguages) {
         const lowerLang = lang.toLowerCase();
@@ -100,12 +100,13 @@ export const aggregateUserInfo = (
             ),
             date: new Date(week.date),
         }));
-    const contributesLanguage: { [language: string]: { color: string; contributions: number } } = {};
+    const contributesLanguage: { [language: string]: { color: string; contributions: number; repos: Set<string> } } = {};
     user.contributionsCollection.commitContributionsByRepository
         .filter((repo) => repo.repository.languages && repo.repository.languages.totalSize > 0)
         .forEach((repo) => {
             const languages = repo.repository.languages!;
             const contributions = repo.contributions.totalCount;
+            const repoName = repo.repository.nameWithOwner;
 
             // Filter out excluded languages (using expanded set with aliases)
             const includedEdges = languages.edges.filter(
@@ -127,10 +128,12 @@ export const aggregateUserInfo = (
                 const info = contributesLanguage[language];
                 if (info) {
                     info.contributions += proportionalContributions;
+                    info.repos.add(repoName);
                 } else {
                     contributesLanguage[language] = {
                         color: color,
                         contributions: proportionalContributions,
+                        repos: new Set([repoName]),
                     };
                 }
             });
@@ -140,6 +143,7 @@ export const aggregateUserInfo = (
             language: language,
             color: info.color,
             contributions: Math.round(info.contributions),
+            repoCount: info.repos.size,
         }))
         .filter((info) => info.contributions > 0)
         .sort((obj1, obj2) => -compare(obj1.contributions, obj2.contributions));
